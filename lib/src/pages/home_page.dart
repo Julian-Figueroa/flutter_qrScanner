@@ -1,8 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:qrreader/src/pages/directions_page.dart';
 import 'package:qrreader/src/pages/maps_page.dart';
 
 import 'package:qrcode_reader/qrcode_reader.dart';
+
+import 'package:qrreader/src/bloc/scans_bloc.dart';
+import 'package:qrreader/src/models/scan_model.dart';
+import 'package:qrreader/src/utils/utils.dart' as utils;
 
 class HomePage extends StatefulWidget {
   @override
@@ -10,7 +16,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final scansBloc = new ScansBloc();
+
   int currIndex = 0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,7 +28,7 @@ class _HomePageState extends State<HomePage> {
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.delete_forever),
-            onPressed: () {},
+            onPressed: scansBloc.deleteAllScans,
           ),
         ],
       ),
@@ -28,7 +37,7 @@ class _HomePageState extends State<HomePage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.filter_center_focus),
-        onPressed: _scanQR,
+        onPressed: () => _scanQR(context),
         backgroundColor: Theme.of(context).primaryColor,
       ),
     );
@@ -68,11 +77,8 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _scanQR() async {
-    String futureString = '';
-
-    // https://fernando-herrera.com
-    // geo:40.67425780940018,-73.69557753046877
+  void _scanQR(context) async {
+    String futureString;
 
     try {
       futureString = await new QRCodeReader().scan();
@@ -80,9 +86,17 @@ class _HomePageState extends State<HomePage> {
       futureString = e.toString();
     }
 
-    print('Future String: $futureString');
     if (futureString != null) {
-      print("There's data");
+      final scan = ScanModel(value: futureString);
+      scansBloc.addNewScan(scan);
+
+      if (Platform.isIOS) {
+        Future.delayed(Duration(milliseconds: 750), () {
+          utils.openScan(context, scan);
+        });
+      } else {
+        utils.openScan(context, scan);
+      }
     }
   }
 }
